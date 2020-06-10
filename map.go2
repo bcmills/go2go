@@ -1,0 +1,30 @@
+package main
+
+// Map returns a new slice containig the result of applying f to each element in src.
+func Map(type T1, T2)(src []T1, f func(T1) T2) []T2 {
+	dst := make([]T2, 0, len(src))
+	for _, x := range src {
+		dst = append(dst, f(x))
+	}
+	return dst
+}
+
+func recv(type T)(x <-chan T) T {
+	return <-x
+}
+
+func main() {
+	var chans []chan int
+
+	// To map the recv function over a slice of bidirectional channels,
+	// we need to wrap it: even though the element type "chan int"
+	// is assignable to the argument type, the two function types are distinct.
+	//
+	// (There is no way for Map to declare an argument type “assignable from T1”,
+	// so it must use “exactly T1” instead.)
+	vals := Map(chans, func(x chan int) int {
+		return recv(int)(x)
+	})
+
+	_ = vals
+}
