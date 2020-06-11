@@ -6,9 +6,9 @@ import (
 	"syscall"
 )
 
-// MapTo copies all of the elements in src to dst, using the supplied function
+// MapAt copies all of the elements in src to dst, using the supplied function
 // to convert between the two.
-func MapTo(type T2, T1)(dst []T2, src []T1, convert func(T1) T2) int {
+func MapAt(type T2, T1)(dst []T2, src []T1, convert func(T1) T2) int {
 	for i, x := range src {
 		if i > len(dst) {
 			return i
@@ -22,7 +22,7 @@ func main() {
 	errnos := []syscall.Errno{syscall.ENOSYS, syscall.EINVAL}
 	errs := make([]error, len(errnos))
 
-	MapTo(errs, errnos, func(err syscall.Errno) error { return err })
+	MapAt(errs, errnos, func(err syscall.Errno) error { return err })
 
 	for _, err := range errs {
 		fmt.Println(err)
@@ -34,7 +34,7 @@ func main() {
 	}
 	funcs := make([]func(), len(cancelers))
 
-	MapTo(funcs, cancelers, func(f context.CancelFunc) func() { return f })
+	MapAt(funcs, cancelers, func(f context.CancelFunc) func() { return f })
 
 	for _, f := range funcs {
 		f()
