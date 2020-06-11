@@ -1,6 +1,7 @@
 package main
 
-// Map returns a new slice containig the result of applying f to each element in src.
+// Map returns a new slice containing the result of applying f to each element
+// in src.
 func Map(type T1, T2)(src []T1, f func(T1) T2) []T2 {
 	dst := make([]T2, 0, len(src))
 	for _, x := range src {
