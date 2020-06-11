@@ -4,6 +4,12 @@ package main
 // in src.
 func Map(type T1, T2)(src []T1, f func(T1) T2) []T2 {
 	dst := make([]T2, 0, len(src))
+	return AppendMapped(dst, src, f)
+}
+
+// AppendMapped applies f to each element in src, appending each result to dst
+// and returning the resulting slice.
+func AppendMapped(type T1, T2)(dst []T2, src []T1, f func(T1) T2) []T2 {
 	for _, x := range src {
 		dst = append(dst, f(x))
 	}
