@@ -1,0 +1,48 @@
+package main
+
+import "fmt"
+
+// Fig. 23
+
+type Any interface{}
+type Eq(type a Any) interface {
+	Equal(that a) Bool
+}
+type Bool interface {
+	Not() Bool
+	Equal(that Bool) Bool
+	cond(br Branches(Any)) Any
+}
+type Branches(type a Any) interface {
+	IfTT() a
+	IfFF() a
+}
+type Cond(type a Any) struct{}
+func (this Cond(a)) Eval(b Bool, br Branches(a)) a {
+	return b.cond(anyBranches(a){br}).(a)
+}
+type anyBranches(type a Any) struct {
+	typed Branches(a)
+}
+func (br anyBranches(a)) IfTT() Any {
+	return br.typed.IfTT()
+}
+func (br anyBranches(a)) IfFF() Any {
+	return br.typed.IfFF()
+}
+
+type TT struct{}
+type FF struct{}
+
+func (this TT) Not() Bool { return FF{} }
+func (this FF) Not() Bool { return TT{} }
+
+func (this TT) Equal(that Bool) Bool { return that }
+func (this FF) Equal(that Bool) Bool { return that.Not() }
+
+func (this TT) cond(br Branches(Any)) Any { return br.IfTT() }
+func (this FF) cond(br Branches(Any)) Any { return br.IfFF() }
+
+func main() {
+	fmt.Println()
+}

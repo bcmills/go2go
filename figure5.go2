@@ -48,7 +48,7 @@ func (xs Cons(a)) Match(casenil Function(Nil(a), Any), casecons Function(Cons(a)
 	return casecons.Apply(xs)
 }
 type lists(type a Any, b Any) struct{}
-func (this lists(a, b)) Map(f Function(a, b), xs List(a)) List(b) {
+func (_ lists(a, b)) Map(f Function(a, b), xs List(a)) List(b) {
 	return xs.Match(mapNil(a, b){}, mapCons(a, b){f}).(List(b))
 }
 type mapNil(type a Any, b Any) struct{}
@@ -61,10 +61,18 @@ type mapCons(type a Any, b Any) struct{
 func (m mapCons(a, b)) Apply(xs Cons(a)) Any {
 	return Cons(b){m.f.Apply(xs.Head), lists(a, b){}.Map(m.f, xs.Tail)}
 }
-func main() {
-	var xs List(int) = Cons(int){3, Cons(int){6, Nil(int){}}}
-	var ys List(int) = lists(int, int){}.Map(incr{-5}, xs)
-	var xz List(bool) = lists(int, bool){}.Map(pos{}, ys)
 
-	fmt.Println(xz)
+// Fig. 5
+
+type Edge(type e Edge(e, v), v Vertex(e, v)) interface {
+	Source() v
+	Target() v
+}
+
+type Vertex(type e Edge(e, v), v Vertex(e, v)) interface {
+	Edges() List(e)
+}
+
+func main() {
+	fmt.Println()
 }
