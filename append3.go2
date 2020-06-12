@@ -1,0 +1,140 @@
+package main
+
+import (
+	"context"
+	"fmt"
+)
+
+type sliceOf(type E) interface{ type []E }
+
+func append(type S sliceOf(T), T interface{}, T2 interface{ type T })(s S, t ...T2) S {
+	lens := len(s)
+	tot := lens + len(t)
+	if tot < 0 {
+		panic("Append: cap out of range")
+	}
+	if tot > cap(s) {
+		news := make([]T, tot, tot+tot/2)
+		copy(news, s)
+		s = news
+	}
+	for _, x := range t {
+		//		s = T(x)
+		_ = x
+	}
+	return s
+}
+
+type Funcs []func()
+type Cancels []context.CancelFunc
+type Recv <-chan int
+
+var (
+	f           func()
+	cancel      context.CancelFunc
+	funcSlice   []func()
+	cancelSlice []context.CancelFunc
+	funcs       Funcs
+	cancels     Cancels
+	r           <-chan int
+	recvSlice   []<-chan int
+	R           Recv
+	RecvSlice   []Recv
+	b           chan int
+	bidiSlice   []chan int
+)
+
+func main() {
+	// cannot infer T
+	ff := append([]func(), func(), func())(funcSlice, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, f, ff)
+
+	// cannot infer T
+	// returns type []func()
+	var Ff Funcs = append([]func(), func(), func())(funcs, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, f, Ff)
+
+	// cannot infer T
+	fc := append([]func(), func(), context.CancelFunc)(funcSlice, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, cancel, fc)
+
+	// cannot infer T
+	// func() does not satisfy interface{type T} (func() not found in context.CancelFunc)
+	// context.CancelFunc does not satisfy interface{type T} (func() not found in context.CancelFunc)
+	// cf := append([]context.CancelFunc, context.CancelFunc, context.CancelFunc)(cancelSlice, f)
+	// fmt.Printf("append(%T, %T) = %T\n", cancelSlice, f, cf)
+
+	// cannot infer T
+	Fc := append(Funcs, func(), context.CancelFunc)(funcs, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, cancel, Fc)
+
+	// cannot infer T
+	// func() does not satisfy interface{type T} (func() not found in context.CancelFunc)
+	// context.CancelFunc does not satisfy interface{type T} (func() not found in context.CancelFunc)
+	// Cc := append(Cancels, context.CancelFunc, context.CancelFunc)(cancels, f)
+	// fmt.Printf("append(%T, %T) = %T\n", cancels, f, Cc)
+
+	// type context.CancelFunc of cancel does not match inferred type func() for T2
+	ffc := append([]func(), func(), context.CancelFunc)(funcSlice, f, cancel)
+	fmt.Printf("append(%T, %T, %T) = %T\n", funcSlice, f, cancel, ffc)
+
+	// cannot infer T
+	ff2 := append([]func(), func(), func())(funcSlice, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcSlice, funcSlice, ff2)
+
+	// type Funcs of funcs does not match []T2
+	// cannot infer T
+	// returns type []func()
+	var FF2 Funcs = append([]func(), func(), func())(funcs, funcs...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcs, FF2)
+
+	// cannot infer T
+	// returns type []func()
+	var Ff2 Funcs = append([]func(), func(), func())(funcs, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcSlice, Ff2)
+
+	// cannot infer T
+	// type Cancels of cancels does not match []T2
+	// fc2 := append([]func(), func(), context.CancelFunc)(funcSlice, cancelSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
+
+	// type Cancels of cancels does not match []T2
+	// returns type []func()
+	var FC2 Funcs = append([]func(), func(), context.CancelFunc)(funcs, cancels...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, cancels, FC2)
+
+	// cannot infer T
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr := append([]<-chan int, <-chan int, <-chan int)(recvSlice, r)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, r, rr)
+
+	// cannot infer T
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rb := append([]<-chan int, <-chan int, <-chan int)(recvSlice, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rb)
+
+	// cannot infer T
+	// Recv does not satisfy interface{type T} (<-chan int not found in Recv)
+	// RR := append([]Recv, Recv, Recv) (RecvSlice, R)
+	// fmt.Printf("append(%T, %T) = %T\n", RecvSlice, R, RR)
+
+	// cannot infer T
+	// Recv does not satisfy interface{type T} (<-chan int not found in Recv)
+	// Rb := append([]Recv, Recv, Recv)(RecvSlice, b)
+	// fmt.Printf("append(%T, %T) = %T\n", RecvSlice, b, Rb)
+
+	// cannot infer T
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rrb := append([]<-chan int, <-chan int, <-chan int)(recvSlice, r, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rrb)
+
+	// cannot infer T
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr2 := append([]<-chan int, <-chan int, <-chan int)(recvSlice, recvSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, recvSlice, rr2)
+
+	// cannot infer T
+	// chan int does not satisfy interface{type T} (chan int not found in <-chan int)
+	// rb2 := append([]<-chan int, <-chan int, chan int)(recvSlice, bidiSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, bidiSlice, rb2)
+}

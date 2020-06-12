@@ -1,0 +1,122 @@
+package main
+
+import (
+	"context"
+	"fmt"
+)
+
+func append(type T)(s []T, t ...T) []T {
+	lens := len(s)
+	tot := lens + len(t)
+	if tot < 0 {
+		panic("Append: cap out of range")
+	}
+	if tot > cap(s) {
+		news := make([]T, tot, tot+tot/2)
+		copy(news, s)
+		s = news
+	}
+	s = s[:tot]
+	copy(s[lens:], t)
+	return s
+}
+
+type Funcs []func()
+type Cancels []context.CancelFunc
+type Recv <-chan int
+
+var (
+	f           func()
+	cancel      context.CancelFunc
+	funcSlice   []func()
+	cancelSlice []context.CancelFunc
+	funcs       Funcs
+	cancels     Cancels
+	r        <-chan int
+	recvSlice   []<-chan int
+	R        Recv
+	RecvSlice   []Recv
+	b        chan int
+	bidiSlice   []chan int
+)
+
+func main() {
+	ff := append(funcSlice, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, f, ff)
+
+	// type Funcs of funcs does not match []T
+	// returns type []func()
+	var Ff Funcs = append(func())(funcs, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, f, Ff)
+
+	// type context.CancelFunc of cancel does not match inferred type func() for T
+	fc := append(func())(funcSlice, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, cancel, fc)
+
+	// type func() of f does not match inferred type context.CancelFunc for T
+	cf := append(context.CancelFunc)(cancelSlice, f)
+	fmt.Printf("append(%T, %T) = %T\n", cancelSlice, f, cf)
+
+	// type Funcs of funcs does not match []T
+	// returns type []func()
+	var Fc Funcs = append(func())(funcs, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, cancel, Fc)
+
+	// type Cancels of cancels does not match []T
+	var Cc Cancels = append(context.CancelFunc)(cancels, f)
+	fmt.Printf("append(%T, %T) = %T\n", cancels, f, Cc)
+
+	// type context.CancelFunc of cancel does not match inferred type func() for T
+	ffc := append(func())(funcSlice, f, cancel)
+	fmt.Printf("append(%T, %T, %T) = %T\n", funcSlice, f, cancel, ffc)
+
+	ff2 := append(funcSlice, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcSlice, funcSlice, ff2)
+
+	// type Funcs of funcs does not match []T
+	// returns type []func()
+	var FF2 Funcs = append(func())(funcs, funcs...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcs, FF2)
+
+	// type Funcs of funcs does not match []T
+	//returns type []func()
+	var Ff2 Funcs = append(func())(funcs, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcSlice, Ff2)
+
+	// type []context.CancelFunc of cancelSlice does not match []T
+	// cannot use funcSlice (variable of type []func()) as []context.CancelFunc value in argument
+	// fc2 := append(func())(funcSlice, cancelSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
+
+	// type Funcs of funcs does not match []T
+	// cannot use cancels (variable of type Cancels) as []func() value in argument
+	// FC2 := append(func())(funcs, cancels...)
+	// fmt.Printf("append(%T, %T...) = %T\n", funcs, cancels, FC2)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr := append(recvSlice, r)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, r, rr)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rb := append(recvSlice, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rb)
+
+	RR := append(RecvSlice, R)
+	fmt.Printf("append(%T, %T) = %T\n", RecvSlice, R, RR)
+
+	// type chan int of b does not match inferred type Recv for T
+	Rb := append(Recv)(RecvSlice, b)
+	fmt.Printf("append(%T, %T) = %T\n", RecvSlice, b, Rb)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rrb := append(recvSlice, r, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rrb)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr2 := append(recvSlice, recvSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, recvSlice, rr2)
+
+	// cannot use bidiSlice (variable of type []chan int) as []<-chan int value in argument
+	// rb2 := append(recvSlice, bidiSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, bidiSlice, rb2)
+}

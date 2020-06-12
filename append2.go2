@@ -1,0 +1,118 @@
+package main
+
+import (
+	"context"
+	"fmt"
+)
+
+type sliceOf(type E) interface{ type []E }
+
+func append(type S sliceOf(T), T interface{})(s S, t ...T) S {
+	lens := len(s)
+	tot := lens + len(t)
+	if tot < 0 {
+		panic("Append: cap out of range")
+	}
+	if tot > cap(s) {
+		news := make([]T, tot, tot+tot/2)
+		copy(news, s)
+		s = news
+	}
+	s = s[:tot]
+	copy(s[lens:], t)
+	return s
+}
+
+type Funcs []func()
+type Cancels []context.CancelFunc
+type Recv <-chan int
+
+var (
+	f           func()
+	cancel      context.CancelFunc
+	funcSlice   []func()
+	cancelSlice []context.CancelFunc
+	funcs       Funcs
+	cancels     Cancels
+	r           <-chan int
+	recvSlice   []<-chan int
+	R           Recv
+	RecvSlice   []Recv
+	b           chan int
+	bidiSlice   []chan int
+)
+
+func main() {
+	ff := append(funcSlice, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, f, ff)
+
+	Ff := append(funcs, f)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, f, Ff)
+
+	// []func() does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
+	fc := append([]func(), func())(funcSlice, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcSlice, cancel, fc)
+
+	// []context.CancelFunc does not satisfy sliceOf(T) ([]context.CancelFunc not found in []func())
+	cf := append([]context.CancelFunc, context.CancelFunc)(cancelSlice, f)
+	fmt.Printf("append(%T, %T) = %T\n", cancelSlice, f, cf)
+
+	// Funcs does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
+	Fc := append(Funcs, func())(funcs, cancel)
+	fmt.Printf("append(%T, %T) = %T\n", funcs, cancel, Fc)
+
+	// Cancels does not satisfy sliceOf(T) ([]context.CancelFunc not found in []func())
+	Cc := append(Cancels, context.CancelFunc)(cancels, f)
+	fmt.Printf("append(%T, %T) = %T\n", cancels, f, Cc)
+
+	// type context.CancelFunc of cancel does not match inferred type func() for T
+	ffc := append([]func(), func())(funcSlice, f, cancel)
+	fmt.Printf("append(%T, %T, %T) = %T\n", funcSlice, f, cancel, ffc)
+
+	ff2 := append(funcSlice, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcSlice, funcSlice, ff2)
+
+	// type Funcs of funcs does not match []T
+	FF2 := append(Funcs, func())(funcs, funcs...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcs, FF2)
+
+	Ff2 := append(funcs, funcSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcSlice, Ff2)
+
+	// []func() does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
+	// fc2 := append(funcSlice, cancelSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
+
+	// type Cancels of cancels does not match []T
+	// FC2 := append(funcs, cancels...)
+	// fmt.Printf("append(%T, %T...) = %T\n", funcs, cancels, FC2)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr := append(recvSlice, r)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, r, rr)
+
+	// []<-chan int does not satisfy sliceOf(T) ([]<-chan int not found in []chan int)
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rb := append([]<-chan int, <-chan int)(recvSlice, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rb)
+
+	// main.Recv undefined (type func() has no field or method Recv)
+	// RR := append(RecvSlice, R)
+	// fmt.Printf("append(%T, %T) = %T\n", RecvSlice, R, RR)
+
+	// []Recv does not satisfy sliceOf(T) ([]Recv not found in []chan int)
+	Rb := append([]Recv, Recv)(RecvSlice, b)
+	fmt.Printf("append(%T, %T) = %T\n", RecvSlice, b, Rb)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rrb := append(recvSlice, r, b)
+	// fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rrb)
+
+	// panic: unexpected type string character '<' in "<-chan int"
+	// rr2 := append(recvSlice, recvSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, recvSlice, rr2)
+
+	// []<-chan int does not satisfy sliceOf(T) ([]<-chan int not found in []chan int)
+	// rb2 := append(recvSlice, bidiSlice...)
+	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, bidiSlice, rb2)
+}
