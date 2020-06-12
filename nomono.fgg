@@ -1,0 +1,13 @@
+package main
+
+type Any interface{}
+type Recurser interface {
+	Recurse() Any
+}
+type Impl(type a Any) struct{}
+func (this Impl(type a Recurser)) Recurse() Any {
+	return Impl(Impl(a)){}.Recurse()
+}
+func main() {
+	var _ Any = Impl(Recurser){}.Recurse()
+}
