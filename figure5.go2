@@ -30,8 +30,8 @@ type Eq(type a) interface {
  Equal(a) bool
 }
 type Int int
-func (this Int) Equal(that int) bool {
-	return int(this) == that
+func (this Int) Equal(that Int) bool {
+	return this == that
 }
 type List(type a Any) interface{
 	Match(casenil Function(Nil(a), Any), casecons Function(Cons(a), Any)) Any
@@ -68,11 +68,9 @@ type Edge(type e Edge(e, v), v Vertex(e, v)) interface {
 	Source() v
 	Target() v
 }
-
 type Vertex(type e Edge(e, v), v Vertex(e, v)) interface {
 	Edges() List(e)
 }
-
 func main() {
 	fmt.Println()
 }
