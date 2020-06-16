@@ -1,3 +1,11 @@
+# Coherent interface constraints for assignability and convertibility?
+
+This document is a sketch of two interface types that could be added to the
+[draft Type Parameters design](http://golang.org/design/go2draft-type-parameters)
+to enable conversion and assignment in generic code.
+
+--------------------------------------------------------------------------------
+
 The interface type `convertible.To(T)` is implemented by any dynamic type that
 can be converted to `T`, including `T` itself, any type assignable to `T`, and
 any type that has the same _[underlying type][]_ as `T`. A variable of type
