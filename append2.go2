@@ -1,3 +1,13 @@
+// Copyright 2020 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// append2 illustrates the properties of a two-type-parameter "append" variant.
+// With explicit type annotations, it seems to be able to handle the same cases
+// as the existing built-in append.
+//
+// However, I don't see a plausible type-inference algorithm that makes it work
+// for all of those cases without explicit type annotations.
 package main
 
 import (

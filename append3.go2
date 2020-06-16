@@ -1,3 +1,12 @@
+// Copyright 2020 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// append3 illustrates the properties of a 3-type-parameter "append" variant.
+//
+// With a more advanced type-inference algorithm and a proper "assignable to"
+// constraint, it could support inference for all of the same cases as the
+// built-in "append" does today, plus a few others.
 package main
 
 import (
@@ -8,7 +17,14 @@ import (
 
 type sliceOf(type E) interface{ type []E }
 
-func append(type S sliceOf(T), T interface{}, T2 interface{ type T })(s S, t ...T2) S {
+// buggyAssignableTo simulates an “assignable to” type constraint using
+// the closest available alternative (a 1-element type list, which works
+// for a few defined types but not channel-directons or subinterfaces).
+type buggyAssignableTo(type T) interface {
+	type T
+}
+
+func append(type S sliceOf(T), T interface{}, T2 buggyAssignableTo(T))(s S, t ...T2) S {
 	lens := len(s)
 	tot := lens + len(t)
 	if tot < 0 {
@@ -21,6 +37,7 @@ func append(type S sliceOf(T), T interface{}, T2 interface{ type T })(s S, t ...
 	}
 	s = s[:tot]
 	for i, x := range t {
+		// This is why buggyAssignableTo is buggy. 🙂
 		p := unsafe.Pointer(&x)
 		s[lens+i] = *(*T)(p)
 	}

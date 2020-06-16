@@ -1,3 +1,9 @@
+// Copyright 2020 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// map illustrates the awkwardness of functional APIs in the absence of
+// assignability and/or subtyping constraints.
 package main
 
 // Map returns a new slice containing the result of applying f to each element
