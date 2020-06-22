@@ -134,13 +134,11 @@ underlying type.
 ```
 ----------------------
 Δ ⊢ chan τ <: <-chan τ
-
 ```
 
 ```
 ----------------------
 Δ ⊢ chan τ <: chan<- τ
-
 ```
 
 As with the case for identical underlying types, we cannot make a _defined_ type
