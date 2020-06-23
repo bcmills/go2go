@@ -287,13 +287,14 @@ func GeneralAbsDifference(type T concrete(Numeric))(a, b T) T {
 }
 ```
 
+[type]: https://golang.org/ref/spec#Types
 [implements]: https://golang.org/ref/spec#Interface_types
 [concrete type]: https://golang.org/ref/spec#Variables
 [concrete types]: https://golang.org/ref/spec#Variables
 [conversions]: https://golang.org/ref/spec#Conversions
 [sum types]: https://golang.org/issue/19412
 [Type Parameters draft]: https://golang.org/design/go2draft-type-parameters
-[type lists]: https://golang.org/design/go2draft-type-parameters#type-lists-in-constraints
+[type list]: https://golang.org/design/go2draft-type-parameters#type-lists-in-constraints
 [pointer methods]: https://golang.org/design/go2draft-type-parameters#pointer-methods
 [substitution lemma]: http://twelf.org/wiki/Substitution_lemma
 [Featherweight Go]: https://arxiv.org/abs/2005.11710 "Featherweight Go, 2020"
