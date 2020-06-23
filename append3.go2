@@ -105,9 +105,8 @@ func main() {
 	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcSlice, Ff2)
 
 	// cannot infer T (http://b/159049873)
-	// type Cancels of cancels does not match []T2
-	// fc2 := append([]func(), func(), context.CancelFunc)(funcSlice, cancelSlice...)
-	// fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
+	fc2 := append([]func(), func(), context.CancelFunc)(funcSlice, cancelSlice...)
+	fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
 
 	// cannot infer T
 	FC2 := append(Funcs, func(), context.CancelFunc)(funcs, cancels...)
