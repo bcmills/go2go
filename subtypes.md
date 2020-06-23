@@ -9,8 +9,8 @@ language, _derivable from_ assignability.
 
 ## What is a type?
 
-According to the Go specification, “[a] <dfn>[type][]</dfn> determines a set of
-values together with operations and methods specific to those values”.
+According to the Go specification, “[a] _[type][]_ determines a set of values
+together with operations and methods specific to those values”.
 
 ## What is a subtype?
 
@@ -39,12 +39,17 @@ which permits a phrase of sort ω′” in Go as “an operation for which ω′
 assignable to the required operand type”. That leads to the following
 definition:
 
-In Go, `T1` is a <dfn>subtype</dfn> of `T2` if, for every `T3` to which a value
-of type `T2` is assignable, every value `x` of type `T1` is _also_ assignable to
-`T3`. (Note that the precondition is “`x` _of type_ `T1`”, not “`x` _assignable
-to_ `T1`”. The distinction is subtle, but important.)
+In Go, `T1` is a _subtype_ of `T2` if, for every `T3` to which a value of type
+`T2` is assignable, every value `x` of type `T1` is _also_ assignable to `T3`.
+(Note that the precondition is “`x` _of type_ `T1`”, not “`x` _assignable to_
+`T1`”. The distinction is subtle, but important.)
 
-Let's examine the cases in the Go specification.
+Let's examine the assignability cases in the Go specification.
+
+> A value `x` is _assignable_ to a variable of type `T` ("`x` is assignable to
+> `T`") if one of the following conditions applies:
+
+--------------------------------------------------------------------------------
 
 > *   `x`'s type is identical to `T`
 
@@ -63,7 +68,7 @@ This gives the two reflexive rules from the Featherweight Go paper:
 For the full Go language, we can generalize `τS` to include the built-in
 non-interface [composite types][] (arrays, structs, pointers, functions, slices,
 maps, and channels), boolean types, numeric types, and string types, which we
-collectively call the <dfn>[concrete types][]</dfn>.
+collectively call the _[concrete types][]_.
 
 This part of the assignability definition also allows a (redundant) rule for
 interface types, which is omitted from Featherweight Go:
@@ -72,6 +77,8 @@ interface types, which is omitted from Featherweight Go:
 ------------
 Δ ⊢ τI <: τI
 ```
+
+--------------------------------------------------------------------------------
 
 > *   `x`'s type `V` and `T` have identical [underlying types][] and at least
 >     one of `V` or `T` is not a [defined][] type.
@@ -112,6 +119,8 @@ Even though `T0` is assignable to `T1`, and `T1` is assignable to `T2`, a value
 of type `T1` is permitted in a context where a value of type `T0` cannot occur —
 specifically, an assigment to `T2`. Thus, `T0` cannot be a subtype of `T1`.
 
+--------------------------------------------------------------------------------
+
 > *   `T` is an interface type and `x` [implements][] `T`.
 
 This leads to the interface-subtyping rule `<:I` from Featherweight Go:
@@ -121,6 +130,8 @@ methodsΔ(τ) ⊇ methodsΔ(τI)
 --------------------------
        Δ ⊢ τ <: τI
 ```
+
+--------------------------------------------------------------------------------
 
 > *   `x` is a bidirectional channel value, `T` is a channel type, `x`'s type
 >     `V` and `T` have identical element types, and at least one of `V` or `T`
@@ -146,12 +157,16 @@ with underlying type `chan T` a subtype of `<-chan T`, because it is
 [possible](https://play.golang.org/p/R_fgYsEJw7S) to use a `<-chan T` in a
 context that excludes other defined types.
 
+--------------------------------------------------------------------------------
+
 > *   `x` is the predeclared identifier `nil` and `T` is a pointer, function,
 >     slice, map, channel, or interface type.
 
 The predeclared identifier `nil` does not itself have a type, so this case does
 not contribute any subtypes. (If it did, then the `nil` type would be a subtype
 of all pointer, function, slice, map, channel, and interface types.)
+
+--------------------------------------------------------------------------------
 
 > *   `x` is an untyped [constant][] [representable][] by a value of type `T`.
 
@@ -195,4 +210,4 @@ Featherweight Go does not seem useful.
 
 [Fuh and Mishra]: https://link.springer.com/content/pdf/10.1007/3-540-19027-9_7.pdf "Type Inference with Subtypes, 1988"
 [Reynolds]: https://link.springer.com/content/pdf/10.1007%2F3-540-10250-7_24.pdf "Using Category Theory to Design Implicit Conversions and Generic Operators, 1980"
-[Featherweight Go]: https://arxiv.org/abs/2005.11710
+[Featherweight Go]: https://arxiv.org/abs/2005.11710 "Featherweight Go, 2020"
