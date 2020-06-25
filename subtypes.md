@@ -83,41 +83,22 @@ interface types, which is omitted from Featherweight Go:
 > *   `x`'s type `V` and `T` have identical [underlying types][] and at least
 >     one of `V` or `T` is not a [defined][] type.
 
-This case makes each [literal][] type a subtype of every _[defined][]_ type with
-the same underlying type:
+This case could in theory make each [literal][] type a subtype of every
+_[defined][]_ type, provided that the defined type has no methods (and thus
+cannot be assigned to any interface with a non-empty method set).
 
 ```
-literal(τ)   Δ ⊢ underlying(σ) = τ
------------------------------------
-            Δ ⊢ τ <: σ
+literal(τ)   Δ ⊢ underlying(σ) = τ   methodsΔ(σ) = ∅
+----------------------------------------------------
+                     Δ ⊢ τ <: σ
 ```
 
-Note that the converse does not hold: even though a defined type `σ` is
-_assignable to_ the corresponding literal type `τ`, `σ` is not assignable to
-_every_ type that permits a value of type `τ`. Consider
-[this program](https://play.golang.org/p/lUVS33lRKGM):
-
-```go
-    type (
-        T0 struct{}
-        T1 = struct{}
-        T2 struct{}
-    )
-    var (
-        x0 T0
-        x1 T1
-        x2 T2
-    )
-
-    x1 = x0 // ok: T0 is assignable to struct{}
-    x2 = x1 // ok: struct{} is assignable to T2
-
-    x2 = x0 // error: cannot use x0 (type T0) as type T2 in assignment
-```
-
-Even though `T0` is assignable to `T1`, and `T1` is assignable to `T2`, a value
-of type `T1` is permitted in a context where a value of type `T0` cannot occur —
-specifically, an assigment to `T2`. Thus, `T0` cannot be a subtype of `T1`.
+However, this rule is inadmissibly fragile: if a method were to be added to `T`,
+as is allowed by the [Go 1 compatibility guidelines][], then `V` would cease to
+be a subtype of `T`. Although there may be a subtype relationship today between
+such types, no program should rely on it. (Consider an
+[example](https://play.golang.org/p/2kU0IA-0zmn) in which a defined type gains a
+trivial `String` method.)
 
 --------------------------------------------------------------------------------
 
@@ -152,10 +133,13 @@ underlying type.
 Δ ⊢ chan τ <: chan<- τ
 ```
 
-As with the case for identical underlying types, we cannot make a _defined_ type
-with underlying type `chan T` a subtype of `<-chan T`, because it is
-[possible](https://play.golang.org/p/R_fgYsEJw7S) to use a `<-chan T` in a
-context that excludes other defined types.
+Unlike a defined type, a literal channel type with a direction can never acquire
+methods in the future. However, we cannot exclude the possibility of new
+interface types themselves: for example, if [sum types][] are ever added to the
+language, `chan T` could not reasonably be assignable to a sum type that allows
+both `<-chan T` and `chan<- T`, since we could not determine to which of those
+types it should decay. However, each of `<-chan T` and `chan<- T` could
+individually be assignable to such a sum.
 
 --------------------------------------------------------------------------------
 
@@ -172,7 +156,24 @@ of all pointer, function, slice, map, channel, and interface types.)
 
 As with `nil`, this case does not contribute any subtypes.
 
-## Why “of type” instead of “assignable to”?
+## Conclusion
+
+Having examined the above cases, we find:
+
+*   A type `T` is always a subtype of itself.
+*   A type `T` is a subtype of every interface that it implements.
+*   Additional subtype relationships exist, but are too fragile to rely on.
+    *   A literal composite type is a subtype of any defined type that has it as
+        an underlying type _and_ has no methods, but Go 1 compatibility allows
+        methods to be added to defined types.
+    *   A bidirectional channel type literal is a subtype of the corresponding
+        directional channel type literals, but only provided that sum types are
+        not added to the language.
+
+Thus, the only _useful_ subtyping relationship in Go is: “`T1` is a subtype of
+`T2` if `T1` _is_ or _implements_ `T2`“.
+
+## Appendix: Why “of type” instead of “assignable to”?
 
 I could have chosen a different definition of subtyping, based on _assignability
 to_ type `T1` instead of a value _of_ type `T1`. That would give a rule
@@ -183,8 +184,8 @@ Unfortunately, that alternate definition would mean that even interface types do
 not have subtypes: if [defined][] type `T` has a [literal][] underlying type `U`
 and implements inteface `I`, then a value of type `U` is assignable to `T`, but
 not to `I`, so `U` could not be a subtype of `I`. A notion of subtyping that
-does not even capture the simple interface-implementation matching of
-Featherweight Go does not seem useful.
+does not even capture simple interface-implementation matching does not seem
+useful.
 
 <!-- Go citations -->
 
@@ -205,6 +206,7 @@ Featherweight Go does not seem useful.
 [representable]: https://golang.org/ref/spec#Representability
 [Type Parameters draft]: https://golang.org/design/go2draft-type-parameters
 [type list]: https://golang.org/design/go2draft-type-parameters#type-lists-in-constraints
+[sum types]: https://golang.org/issue/19412
 
 <!-- Academic citations -->
 
