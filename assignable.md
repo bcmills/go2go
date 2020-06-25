@@ -9,13 +9,11 @@ to enable conversion and assignment in generic code.
 The interface type `convertible.To(T)` is implemented by any dynamic type that
 can be converted to `T`, including `T` itself, any type assignable to `T`, and
 any type that has the same _[underlying type][]_ as `T`. A variable of type
-`convertible.To(T)` may be [converted][] to any type to which `T` itself may be
-converted. If the variable is the `nil` interface value, the result of the
-conversion is the zero-value of the type.
+`convertible.To(T)` may be [converted][] to `T` itself. If the variable is the
+`nil` interface value, the result of the conversion is the zero-value of `T`.
 
-If `T` is an interface type, a variable of type `convertible.To(T)` is
-assignable to any interface that `T` [implements][]. Otherwise, a variable of
-type `convertible.To(T)` is only assignable to the empty interface.
+If `T` is itself an interface type, `convertible.To(T)` has the same method set
+as `T`.
 
 --------------------------------------------------------------------------------
 
@@ -32,9 +30,6 @@ as `T`.
 not be assignable to any other defined type whose underlying type is `T` — even
 if `T` itself is not a defined type — because `assignable.To(T)` may store
 values of _other_ defined types.)
-
-A variable of type `assignable.To(T)` may be converted to any type to which `T`
-itself may be converted.
 
 For example, given:
 
@@ -69,3 +64,4 @@ var (
 [underlying type]: https://golang.org/ref/spec#Types
 [implements]: https://golang.org/ref/spec#Interface_types
 [converted]: https://golang.org/ref/spec#Conversions
+[literal]: https://golang.org/ref/spec#Types
