@@ -202,10 +202,6 @@ dynamic types for values stored _in_ the constraint type”. (However, note that
 this constraint has a well-defined meaning even for types that are not sum
 types.)
 
-```go
-func
-```
-
 ## Examples
 
 With the orthogonal approach, the examples in the draft design become a bit more
@@ -228,7 +224,8 @@ func Smallest(type T in constraints.Ordered)(s []T) T {
 
 ```go
 // StringableSignedInteger is an interface type implemented by any
-// type that both 1) is defined as a signed integer type, and
+// type that both 1) is defined as a signed integer type
+// (or a sum type comprising signed integer types), and
 // 2) has a String method.
 type StringableSignedInteger interface {
     type int, int8, int16, int32, int64
@@ -300,6 +297,8 @@ type Numeric interface {
         complex64, complex128
 }
 
+// GeneralAbsDifference computes the absolute difference between two values
+// of any concrete integer type T.
 func GeneralAbsDifference(type T in Numeric)(a, b T) T {
     // T is a concrete type, so *T can be converted to *Underlying(T).
     // The set of possible types for T is infinite (any defined integer type),
