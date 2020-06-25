@@ -31,18 +31,20 @@ This mismatch in meaning not only makes interface types and type-lists more
 complex to describe and reason about, but also limits the future extensibility
 of the language. Without this semantic mismatch, the Type Parameters design
 could be extended to allow type variables themselves as constraints, with the
-meaning that “the argument must be a [subtype][] of the constraint type”.
-However, if the meaning of an interface varies depending on whether it is a type
-or a constraint the [substitution lemma][] would no longer hold: a type-list
-interface passed as parameter `Τ` and interpreted as a proper interface type
-would match _any_ [subtype][] of `T`, including a type-list interface naming any
-subset of `T`'s type list, but upon substituting `T`'s actual type for the
-constraint, it would no longer allow those interface subtypes.
+meaning that “the argument _is_ or _implements_ the constraint type”, or perhaps
+“the argument _is assignable to_ the constraint type”. However, if the meaning
+of an interface varies depending on whether it is a type or a constraint the
+[substitution lemma][] would no longer hold: a type-list interface passed as
+parameter `Τ` and interpreted as a proper interface type would match any type
+that “implements” `T` — including a type-list interface naming any subset of
+`T`'s type list — but upon substituting `T`'s actual type for the constraint, it
+would no longer allow those interface types.
 
-In contrast, The built-in `comparable` constraint, if allowed as an ordinary
-interface type, would have the same properties as other interface types: it is a
-subtype of itself, and the `==` and `!=` operations are defined uniformly and
-meaningfully for every pair of `comparable` values.
+In contrast, the built-in `comparable` constraint, if allowed as an ordinary
+interface type, would have the same properties as other interface types: the
+`==` and `!=` operations are defined uniformly and meaningfully for every pair
+of `comparable` values, so the type `comparable` itself guarantees the
+operations enabled by the `comparable` constraint.
 
 ## Type lists miss the opportunity to address general use-cases.
 
@@ -64,88 +66,145 @@ directly address the use cases for sum types.
 
 ## How could we address the use-cases of type lists more orthogonally?
 
-Type lists could be made more orthogonal in one of several ways.
+Type lists could be made more orthogonal in one of several ways, but we must
+start by acknowledging that one of the type constraints we want to express —
+namely, the constraint that a parameter must be a _non-interface_ type — is not
+itself a coherent Go type.
 
-We could acknowledge the difference between constraints and interface types and
-move on:
+We could make a minimal change to the design to distinguish between types and
+constraints:
 
-1.  Define a separate `constraint` declaration for type constraints that are not
-    interface types, and move the type-list feature from interfaces to
-    constraints.
+1.  Define that a type constraint may be either an interface type or a type-list
+    constraint. Define type-list constraints as constraints (not types) using
+    tokens other than `type` and `interface`.
 
-Or we could preserve as much of the current type-lists as we can as interface
-types, and split out a constraint for the remaining behaviors:
+    For example, use the token `constraint`instead:
 
-1.  Define “type list” interfaces as underlying-type matchers, implemented by
-    any type that has the same underlying type as an entry in the list.
+    ```go
+    constraint T {
+        type X, Y, Z
+        someInterface
+    }
+    ```
 
-2.  Add a built-in `concrete(T)` constraint (which is not an interface type),
-    which constrains the type argument to be any [concrete type][] that is a
-    [subtype][] of `T`.
+Or, we could split out the “must be a non-interface type” constraint, and
+preserve as much of the current type-lists as we can as interface types:
+
+1.  Define “type list interface types”, implemented by any type for which all
+    values are known to have _a dynamic type with the same underlying type as_
+    one of the types in the list. Either reject or filter out any interface
+    types in the list, since an interface type cannot be the dynamic underlying
+    type of any value at run time.
+
+2.  Define that a type constraint may be either a type, or a type restricted to
+    its concrete (non-interface) implementations.
 
 Or we could break down type-lists into smaller orthogonal parts: disjunction
 interfaces, underlying-type interfaces, and concrete-type constraints.
 
-1.  Define “type list” interfaces as disjunctions of types, implemented by any
-    type that _is_ or _implements_ at least one of the types in the list.
+1.  Define “sum interface types”, implemented by any type that _is or
+    implements_ any of the listed types.
 
-2.  Add a built-in `underlying(T)` interface, implemented by any type whose
-    underlying type is or implements `T`.
+2.  Define “defined-sum interface types”, implemented by any type whose
+    underlying type is any of the listed types.
 
-3.  Add a built-in `concrete(T)` constraint (which is not an interface type),
-    which constrains the type argument to be any [concrete type][] that is a
-    [subtype][] of `T`.
+3.  Define a mapping between defined-sum interface types and the corresponding
+    ordinary sum types.
+
+4.  Define that a type constraint may be either a type, or a type restricted to
+    its concrete (non-interface) implementations.
 
 Under the orthogonal option, the interface types would be defined as follows.
 
-### Type-list interfaces
+### Sum interface types
 
-An interface type containing a type list is implemented by any type that _is_ or
-_implements_ at least one of the types in the list. The method set of a
-type-list interface is the intersection of the method sets of each type in the
-list; no other methods may be defined.
+A sum-interface type (or “sum type”) is declared using the syntax `type = T1, …,
+Tn`, and is implemented by any type that _is_ or _implements_ at least one of
+the types in the list. (When a sum type `T` is implemented by a concrete type
+`R`, we say that `R` is “in“ the sum `T`.)
 
-The zero value of a type-list interface is the `nil` interface value, even if
-none of the types in the list is itself an interface type.
+The method set of a sum type is the intersection of the method sets of each type
+in the sum. No other methods may be defined and no other interfaces may be
+embedded, because the interfaces and methods implemented by the types in the sum
+are already known.
 
-A type switch or type assertion on a variable of a type-list interface may use
-only the types in the list and interface types _implemented by_ at least one
-type in the list. To allow lists to be expanded over time, a `default` case is
-permitted even if the switch is exhaustive.
+The zero value of a sum type is the `nil` interface value, even if none of the
+types in the list is itself an interface type.
 
-A type-list interface is assignable to any interface implemented by all of the
-types in the list.
+A type switch or type assertion on a variable of a sum type may use only the
+types in the sum and interface types _implemented by_ at least one type in the
+sum. To allow lists to be expanded over time, a `default` case is permitted even
+if the switch is exhaustive.
 
-If all of the types in the list are convertible to some type `T`, then the
-type-list interface is also convertible to `T`. If `T` is a concrete type, the
-`nil` interface value converts to the zero-value of the type.
+A sum type is assignable to any interface implemented by all of the types in the
+sum.
 
-A type-list interface embedded in another interface restricts the other
-interface to only the types in the list
+If all of the types in the sum are convertible to a type `T`, then the sum type
+is also convertible to `T`. If `T` is a concrete type, the `nil` interface value
+converts to the zero-value of the type.
 
-### Underlying-type interfaces
+A sum type embedded in another interface `S` restricts `S` to the types in the
+sum that also implement the remainder of `S`. (If multiple sum interface types
+are embedded in an interface, the types in the sums are intersected.)
 
-The interface type `underlying(T)` is defined only for types `T` that are
-predeclared boolean, numeric, or string types, type literals, or type-list
-interfaces comprising the same. `underlying(T)` is itself a type-list interface,
-but its list of types is unbounded.
+### Defined-sum interface types
 
-A type `R` implements `underlying(T)` if either:
+A defined-sum interface type (or “defined sum type”), declared using the syntax
+`type T1, … Tn`, is a sum type that includes in the sum every type whose
+underlying type is one of the listed types (`T1` through `Tn`). (An ordinary sum
+type includes a fixed set of types, but the set of types included in a
+defined-sum type is unbounded.)
 
-*   the underlying type of `R` is identical to `T` or occurs in the type-list of
-    `T`,
+The underlying types listed in a defined sum type declaration must be
+predeclared boolean, numeric, or string types, type literals, or sum types
+comprising the same.
 
-*   or `R` is a pointer type that is not a defined type, and the type list of
-    `T` includes a pointer type `P` with a pointer base type identical to the
-    underlying type of the pointer base type of `R`.
+A defined-sum interface type _may_ include additional methods. A defined-sum
+interface may embed other (ordinary and defined) sum interfaces.
 
-(The second case above is intended to handle the special case of [conversions][]
-for non-defined pointer types with compatible base types.)
-
-A value of type `underlying(T)` can be converted to `T`. If `T` is an interface
-type, the result of the conversion is an interface value whose dynamic type is
-in the type list of `T`. The `nil` interface value converts to the zero-value of
+A type `R` implements a defined sum type `T` if the underlying type of `R` is in
+the underlying-type list of `T`, the method set of `R` includes all of the
+methods declared in `T`, and `R` implements all of the interfaces embedded in
 `T`.
+
+### The `Underlying` type alias and `underlying` function
+
+The built-in type `Underlying(type T)` is an alias for the type encompassing the
+underlying types of the _concrete values of_ any type `T`:
+
+*   If `T` is a sum interface type (including a defined-sum interface type),
+    `Underlying(T)` is the sum interface type containing `Underlying(Tᵢ)` for
+    each `Tᵢ` in `T`.
+*   If `T` is any other interface type, `Underlying(T)` is the empty interface
+    type. (That is, the set of possible underlying types for the values of type
+    `T` is unrestricted.)
+*   Otherwise, `T` is a concrete type, and `Underlying(T)` is its underlying
+    type.
+
+The built-in function `underlying` converts a value of any type to a value of
+its underlying type.
+
+```go
+func underlying(type T)(x T) Underlying(T)
+```
+
+### Constraining type parameters to concrete types
+
+The last piece of the puzzle is a constraint that restricts a type parameter to
+only [concrete types][]. If all of the concrete types in a sum interface type
+support a given operation, then a function with a type parameter constrained to
+those concrete types can safely use that operation.
+
+We could imagine a lot of options for the syntax of such a constraint. For the
+purpose of this document, I suggest the keyword `in` immediately before the
+parameter's type constraint, meaning “the type must be one of the concrete
+dynamic types for values stored _in_ the constraint type”. (However, note that
+this constraint has a well-defined meaning even for types that are not sum
+types.)
+
+```go
+func
+```
 
 ## Examples
 
@@ -157,48 +216,46 @@ becomes possible to implement.
 package constraints
 
 type Ordered interface {
-    underlying(interface {
-        type int, int8, …, string
-    })
+    type int, int8, …, string
 }
 ```
 
 ```go
-func Smallest(type T concrete(constraints.Ordered))(s []T) T {
+func Smallest(type T in constraints.Ordered)(s []T) T {
     …
 }
 ```
 
 ```go
-// StringableSignedInteger is a type constraint that matches any
-// type that is both 1) defined as a signed integer type;
+// StringableSignedInteger is an interface type implemented by any
+// type that both 1) is defined as a signed integer type, and
 // 2) has a String method.
 type StringableSignedInteger interface {
-    underlying(interface{ type int, int8, int16, int32, int64 })
+    type int, int8, int16, int32, int64
     String() string
 }
 ```
 
 ```go
-// SliceConstraint is a type constraint that matches a slice of
-// the type parameter.
+// SliceConstraint is an interface type implemented by any slice type with
+// an element type identical to the type parameter.
 type SliceConstraint(type T) interface {
-    underlying([]T)
+    type []T
 }
 ```
 
 ```go
+// integer is a type implemented by any defined integer type.
 type integer interface {
-    underlying(interface{
-        type int, int8, int16, int32, int64,
-            uint, uint8, uint16, uint32, uint64, uintptr
-    })
+    type int, int8, int16, int32, int64,
+        uint, uint8, uint16, uint32, uint64, uintptr
 }
 
-// Convert converts x, which may be any integer type
-// (including an interface type whose allowable values are all integers),
-// to the integer type To, which must be any specific (concrete) integer type.
-func Convert(type To concrete(integer), From integer)(x From) To {
+// Convert converts a value of type From to the type To.
+// To must be a specific concrete integer type.
+// From may be any type that implements the integer interface,
+// including any sum type whose members are all integer types.
+func Convert(type To in integer, From integer)(x From) To {
     to := To(x)
     if From(to) != x {
         panic("conversion out of range")
@@ -208,82 +265,73 @@ func Convert(type To concrete(integer), From integer)(x From) To {
 ```
 
 ```go
-type builtinInteger interface {
+type integer interface {
     type int, int8, int16, int32, int64,
         uint, uint8, uint16, uint32, uint64, uintptr
 }
-type integer interface {
-    underlying(builtinInteger)
-}
 
-func Add10(type T concrete(integer))(s []T) {
+func Add10(type T in integer)(s []T) {
     for i, v := range s {
         s[i] = v + 10 // OK: 10 can convert to any concrete integer type
     }
 }
 
 // This function is INVALID.
-func Add1024(type T concrete(integer))(s []T) {
+func Add1024(type T in integer)(s []T) {
     for i, v := range s {
-        s[i] = v + 1024 // INVALID: 1024 not permitted by int8/uint8
+        s[i] = v + 1024 // INVALID: 1024 not permitted by types int8 and uint8 in integer
     }
 }
 
 // This function is INVALID.
 func Add10Interface(type T integer)(s []T) {
     for i, v := range s {
-        s[i] = v + 10 // INVALID: operation + not permitted for type integer that may be an interface type
+        s[i] = v + 10 // INVALID: operation + not permitted for type T that may be an interface type (use "T in integer" to restrict to concrete types)
     }
 }
 
 ```
 
 ```go
-
-type BuiltinNumeric interface {
+type Numeric interface {
     type int, int8, int16, int32, int64,
         uint, uint8, uint16, uint32, uint64, uintptr,
         float32, float64,
         complex64, complex128
 }
 
-type Numeric interface {
-    underlying(BuiltinNumeric)
-}
-
-type BuiltinNumericPointer interface {
-    type *int, *int8, *int16, *int32, *int64
-        *uint, *uint8, *uint16, *uint32, *uint64, *uintptr
-        *float32, *float64
-        *complex64, *complex128
-}
-
-type NumericPointer interface {
-    underlying(BuiltinNumericPointer)
-}
-
-func GeneralAbsDifference(type T concrete(Numeric))(a, b T) T {
+func GeneralAbsDifference(type T in Numeric)(a, b T) T {
+    // T is a concrete type, so *T can be converted to *Underlying(T).
+    // The set of possible types for T is infinite (any defined integer type),
+    // but the set of possible types for Underlying(T) is small
+    // (only the built-in integer types).
     var result T
-    rp := BuiltinNumericPointer(NumericPointer(&result))  // Convert result to a pointer to its underlying type.
+    var rp interface{} = (*Underlying(T))(&result)
 
-    // Now we can switch exhaustively on the possible underlying types,
-    // and safely type-assert rp, a, and b to obtain suitable operands.
-    switch a := BuiltinNumeric(a).(type) {
-    case int:
-        *(rp.(*int)) = OrderedAbsDifference(a, BuiltinNumeric(b).(int))
-    case int8:
-        *(rp.(*int8)) = OrderedAbsDifference(a, BuiltinNumeric(b).(int8))
+    // Convert a and b to their underlying types so that we
+    // can type-assert them to a concrete type from a finite list.
+    var au, bu interface{} = underlying(a), underlying(b)
+
+    // Now we can write an exhaustive type switch over the list of possible types of
+    // rp, au, and bu.
+    switch rp := rp.(type) {
+    case *int:
+        *rp = OrderedAbsDifference(au.(int), bu.(int))
+    case *int8:
+        *rp = OrderedAbsDifference(au.(int8), bu.(int8))
     …
 
-    case complex64:
-        *(rp.(*complex64)) = ComplexAbsDifference(a, BuiltinNumeric(b).(complex64))
+    case *complex64:
+        *rp = ComplexAbsDifference(au.(complex64), bu.(complex64))
     …
 
     default:
-        panic(fmt.Sprintf("%T is not a recognized numeric type", v))
+        // If, say, int128 is added to a future version of the language,
+        // we will need to add a case for it.
+        panic(fmt.Sprintf("%T is not a recognized numeric type", au))
     }
 
-    return r
+    return result
 }
 ```
 
@@ -298,4 +346,3 @@ func GeneralAbsDifference(type T concrete(Numeric))(a, b T) T {
 [pointer methods]: https://golang.org/design/go2draft-type-parameters#pointer-methods
 [substitution lemma]: http://twelf.org/wiki/Substitution_lemma
 [Featherweight Go]: https://arxiv.org/abs/2005.11710 "Featherweight Go, 2020"
-[subtype]: ./subtypes.md
