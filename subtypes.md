@@ -183,7 +183,7 @@ to_ `T1`, `x` is also assignable to `T2`.“ Why not use that definition instead
 Unfortunately, that alternate definition would mean that even interface types do
 not have subtypes: if [defined][] type `T` has a [literal][] underlying type `U`
 and implements inteface `I`, then a value of type `U` is assignable to `T`, but
-not to `I`, so `U` could not be a subtype of `I`. A notion of subtyping that
+not to `I`, so `T` could not be a subtype of `I`. A notion of subtyping that
 does not even capture simple interface-implementation matching does not seem
 useful.
 
