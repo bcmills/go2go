@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package unsafeslice implements common unsafe transformations involving slices.
+// Package unsafeslice implements common unsafe transformations involving slices,
+// based on the reflective prototype in github.com/bcmills/unsafeslice.
+//
+// unsafeslice uses the reflect package only for the SliceHeader type definition.
+// That dependency could be eliminated using a local definition and regression
+// test, as is done in the internal/unsafeheader package in Go 1.15.
 package unsafeslice
 
 import (
