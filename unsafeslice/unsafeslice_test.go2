@@ -50,6 +50,36 @@ func ExampleConvert() {
 	buf := make([]uint32, (len(input)+3)/4)
 
 	// Reinterpret it as a byte slice so that we can copy in our text.
+	// The call site here is awkward because we have to specify both types,
+	// even though the source type can be inferred.
+	alias := unsafeslice.Convert(uint32, byte)(buf)
+	copy(alias, input)
+
+	// Perform an endian-insensitive transformation word-by-word instead of
+	// byte-by-byte.
+	for i := range buf {
+		buf[i] |= 0x20202020
+	}
+
+	// Read the result back out of the byte-slice view to interpret it as text.
+	fmt.Printf("%s\n", alias[:len(input)])
+
+	// Output:
+	// hello, world!
+}
+
+func ExampleConvertAt() {
+	// For this example, we're going to do a transformation on some ASCII text.
+	// That transformation is not endian-sensitive, so we can reinterpret the text
+	// as a slice of uint32s to process it word-at-a-time instead of
+	// byte-at-a-time.
+
+	const input = "HELLO, WORLD!"
+
+	// Allocate an aligned backing buffer.
+	buf := make([]uint32, (len(input)+3)/4)
+
+	// Reinterpret it as a byte slice so that we can copy in our text.
 	var alias []byte
 	unsafeslice.ConvertAt(&alias, buf)
 	copy(alias, input)
