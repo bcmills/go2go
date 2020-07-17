@@ -148,3 +148,14 @@ func TestConvertAtErrors(t *testing.T) {
 		})
 	}
 }
+
+type sliceOfBig []big
+
+func TestConvertAtTypeInference(t *testing.T) {
+	var b []byte
+	var s sliceOfBig
+
+	// This call requires an explicit type conversion. Otherwise, it fails with the error:
+	// 	cannot use &s (value of type *sliceOfBig) as *[]big value in argument
+	unsafeslice.ConvertAt((*[]big)(&s), b)
+}
