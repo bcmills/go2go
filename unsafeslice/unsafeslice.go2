@@ -1,0 +1,101 @@
+// Copyright 2020 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package unsafeslice implements common unsafe transformations involving slices.
+package unsafeslice
+
+import (
+	"fmt"
+	"reflect"
+	"unsafe"
+)
+
+// At returns a slice of length and capacity n located at p.
+//
+// The caller must ensure that p meets the alignment requirements for T,
+// and that the allocation to which p points contains at least n contiguous
+// elements.
+//
+// This implements one possible API for https://golang.org/issue/19367
+// and https://golang.org/issue/13656.
+func At[type T](p *T, n int) []T {
+	var s []T
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&s))
+
+
+	// First set the slice to point to p, then expand the cap and length,
+	// ensuring that the slice is always valid.
+	hdr.Data = uintptr(unsafe.Pointer(p))
+	hdr.Cap = n
+	hdr.Len = n
+
+	return s
+}
+
+// Convert returns a slice that refers to the same memory region as the slice src,
+// but at an arbitrary element type.
+//
+// At some call sites, ConvertAt may provide better type inference than Convert.
+//
+// The caller must ensure that src meets the alignment requirements for T2, and
+// that the length and capacity of src are integer multiples of the size of T2.
+//
+// This implements one possible API for https://golang.org/issue/38203.
+func Convert[type T1, T2](src []T1) []T2 {
+	const srcElemSize = unsafe.Sizeof(*new(T1))
+	capBytes := uintptr(cap(src)) * srcElemSize
+	lenBytes := uintptr(len(src)) * srcElemSize
+
+	const dstElemSize = unsafe.Sizeof(*new(T2))
+
+	if capBytes%dstElemSize != 0 {
+		panic(fmt.Sprintf("Convert: src capacity (%d bytes) is not a multiple of dst element size (%T: %d bytes)", capBytes, *new(T2), dstElemSize))
+	}
+	dstCap := capBytes / dstElemSize
+	if int(dstCap) < 0 || uintptr(int(dstCap)) != dstCap {
+		panic(fmt.Sprintf("Convert: dst capacity (%d) overflows int", dstCap))
+	}
+
+	if lenBytes%dstElemSize != 0 {
+		panic(fmt.Sprintf("Convert: src length (%d bytes) is not a multiple of dst element size (%T: %d bytes)", lenBytes, *new(T2), dstElemSize))
+	}
+	dstLen := lenBytes / dstElemSize
+	if int(dstLen) < 0 || uintptr(int(dstLen)) != dstLen {
+		panic(fmt.Sprintf("ConvertAt: dst length (%d) overflows int", dstLen))
+	}
+
+	var dst []T2
+	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&dst))
+
+	// Safely zero any existing slice at *dst, ensuring that it never contains an
+	// invalid slice.
+	hdr.Len = 0
+	hdr.Cap = 0
+
+	// Now set the slice to point to src, then expand the cap and length,
+	// again ensuring that the slice is always valid.
+	p := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&src)).Data)
+	hdr.Data = uintptr(p)
+	hdr.Cap = int(dstCap)
+	hdr.Len = int(dstLen)
+
+	return dst
+}
+
+// SliceOf is a constraint matching types whose underlying type is a slice of T.
+type SliceOf[type T] interface {
+	type []T
+}
+
+// ConvertAt sets dst, which must be non-nil, to a slice that refers to the same
+// memory region as the slice src, but possibly at a different type.
+//
+// The caller must ensure that src meets the alignment requirements for dst, and
+// that the length and capacity of src are integer multiples of the element size
+// of dst.
+//
+// This implements one possible API for https://golang.org/issue/38203.
+func ConvertAt[type T2, T1](dst *[]T2, src []T1) {
+	*dst = Convert(T1, T2)(src)
+}
