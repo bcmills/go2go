@@ -18,9 +18,8 @@ import (
 
 // At returns a slice of length and capacity n located at p.
 //
-// The caller must ensure that p meets the alignment requirements for T,
-// and that the allocation to which p points contains at least n contiguous
-// elements.
+// The caller must ensure that p points to a backing array containing at least n
+// elements with an equivalent layout, size, and alignment to T.
 //
 // This implements one possible API for https://golang.org/issue/19367
 // and https://golang.org/issue/13656.
@@ -43,8 +42,9 @@ func At[type T](p *T, n int) []T {
 //
 // At some call sites, ConvertAt may provide better type inference than Convert.
 //
-// The caller must ensure that src meets the alignment requirements for T2, and
-// that the length and capacity of src are integer multiples of the size of T2.
+// The caller must ensure that the length and capacity in bytes of src are
+// integer multiples of the size of T2, and that the fields at each byte offset
+// in the resulting slices have equivalent layouts.
 //
 // This implements one possible API for https://golang.org/issue/38203.
 func Convert[type T1, T2](src []T1) []T2 {
@@ -86,9 +86,9 @@ func Convert[type T1, T2](src []T1) []T2 {
 // ConvertAt sets dst, which must be non-nil, to a slice that refers to the same
 // memory region as the slice src, but possibly at a different type.
 //
-// The caller must ensure that src meets the alignment requirements for dst, and
-// that the length and capacity of src are integer multiples of the element size
-// of dst.
+// The caller must ensure that the length and capacity in bytes of src are
+// integer multiples of the size of T2, and that the fields at each byte offset
+// in the resulting slices have equivalent layouts.
 //
 // This implements one possible API for https://golang.org/issue/38203.
 func ConvertAt[type T2, T1](dst *[]T2, src []T1) {
