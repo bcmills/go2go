@@ -73,11 +73,6 @@ func Convert[type T1, T2](src []T1) []T2 {
 	var dst []T2
 	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&dst))
 
-	// Safely zero any existing slice at *dst, ensuring that it never contains an
-	// invalid slice.
-	hdr.Len = 0
-	hdr.Cap = 0
-
 	// Now set the slice to point to src, then expand the cap and length,
 	// again ensuring that the slice is always valid.
 	p := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&src)).Data)
@@ -86,11 +81,6 @@ func Convert[type T1, T2](src []T1) []T2 {
 	hdr.Len = int(dstLen)
 
 	return dst
-}
-
-// SliceOf is a constraint matching types whose underlying type is a slice of T.
-type SliceOf[type T] interface {
-	type []T
 }
 
 // ConvertAt sets dst, which must be non-nil, to a slice that refers to the same
