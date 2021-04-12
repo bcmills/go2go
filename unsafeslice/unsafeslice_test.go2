@@ -19,11 +19,11 @@ func asCPointer(b []byte) (*byte, int) {
 	return &b[0], len(b)
 }
 
-func ExampleAt() {
+func ExampleOf() {
 	original := []byte("Hello, world!")
 	p, n := asCPointer(original)
 
-	alias := unsafeslice.At(p, n)
+	alias := unsafeslice.Of(p, n)
 
 	fmt.Printf("original: %s\n", original)
 	fmt.Printf("alias: %s\n", alias)
@@ -99,9 +99,9 @@ func ExampleConvertAt() {
 
 type big [1 << 20]byte
 
-func TestAtWithVeryLargeTypeDoesNotPanic(t *testing.T) {
+func TestOfWithVeryLargeTypeDoesNotPanic(t *testing.T) {
 	var x big
-	_ = unsafeslice.At(&x, 1)
+	_ = unsafeslice.Of(&x, 1)
 }
 
 func TestConvertAt(t *testing.T) {
