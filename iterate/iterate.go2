@@ -34,6 +34,39 @@ func TransformCtx[T, U any](f func(context.Context) (T, error), g func(context.C
 	}
 }
 
+// Reduce iterates f until EOF, accumulating the results using g with initial value init.
+func Reduce[T, U any](ctx context.Context, f func(context.Context) (T, error), init U, g func(T, U) U) (U, error) {
+	y := init
+	for {
+		x, err := f(ctx)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				return y, err
+			}
+			return y, nil
+		}
+		y = g(x, y)
+	}
+}
+
+// ReduceCtx iterates f until EOF, accumulating the results using g with initial value init.
+func ReduceCtx[T, U any](ctx context.Context, f func(context.Context) (T, error), init U, g func(context.Context, T, U) (U, error)) (U, error) {
+	y := init
+	for {
+		x, err := f(ctx)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				return y, err
+			}
+			return y, nil
+		}
+		y, err = g(ctx, x, y)
+		if err != nil {
+			return y, err
+		}
+	}
+}
+
 // SliceElems returns an iterator function that produces each successive element of s.
 func SliceElems[T any](s []T) func(ctx context.Context) (T, error) {
 	i := 0
