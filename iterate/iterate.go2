@@ -12,6 +12,28 @@ import (
 	"reflect"
 )
 
+// Transform transforms the results of the iterator f by applying g to its results.
+func Transform[T, U any](f func(context.Context) (T, error), g func(T) U) func(context.Context) (U, error) {
+	return func (ctx context.Context) (U, error) {
+		x, err := f(ctx)
+		if err != nil {
+			return *new(U), err
+		}
+		return g(x), nil
+	}
+}
+
+// TransformCtx transforms the result of the iterator f by applying g to its results.
+func TransformCtx[T, U any](f func(context.Context) (T, error), g func(context.Context, T) (U, error)) func(context.Context) (U, error) {
+	return func (ctx context.Context) (U, error) {
+		x, err := f(ctx)
+		if err != nil {
+			return *new(U), err
+		}
+		return g(ctx, x)
+	}
+}
+
 // SliceElems returns an iterator function that produces each successive element of s.
 func SliceElems[T any](s []T) func(ctx context.Context) (T, error) {
 	i := 0
