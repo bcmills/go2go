@@ -12,65 +12,58 @@ import (
 	"reflect"
 )
 
-// Transform transforms the results of the iterator f by applying g to its results.
-func Transform[T, U any](f func(context.Context) (T, error), g func(T) U) func(context.Context) (U, error) {
-	return func (ctx context.Context) (U, error) {
-		x, err := f(ctx)
+// Iterate invokes emit for each value produced by next.
+// If next returns io.EOF, Iterate returns nil.
+// If next returns any other non-nil error, Iterate immediately returns that error.
+func Iterate[T any](next func() (T, error), emit func(T) error) error {
+	for {
+		x, err := next()
 		if err != nil {
-			return *new(U), err
+			if !errors.Is(err, io.EOF) {
+				return err
+			}
+			return nil
 		}
-		return g(x), nil
+		if err := emit(x); err != nil {
+			return err
+		}
 	}
 }
 
-// TransformCtx transforms the result of the iterator f by applying g to its results.
-func TransformCtx[T, U any](f func(context.Context) (T, error), g func(context.Context, T) (U, error)) func(context.Context) (U, error) {
-	return func (ctx context.Context) (U, error) {
-		x, err := f(ctx)
+// Transform transforms the values produced by next by applying f to each value.
+func Transform[T, U any](next func() (T, error), f func(T) (U, error)) func() (U, error) {
+	return func () (U, error) {
+		x, err := next()
 		if err != nil {
 			return *new(U), err
 		}
-		return g(ctx, x)
+		return f(x)
 	}
 }
 
-// Reduce iterates f until EOF, accumulating the results using g with initial value init.
-func Reduce[T, U any](ctx context.Context, f func(context.Context) (T, error), init U, g func(T, U) U) (U, error) {
+// Reduce iterates next until EOF, accumulating the results using f with initial value init.
+func Reduce[T, U any](next func() (T, error), init U, f func(T, U) (U, error)) (U, error) {
 	y := init
 	for {
-		x, err := f(ctx)
+		x, err := next()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				return y, err
 			}
-			return y, nil
+			break
 		}
-		y = g(x, y)
-	}
-}
-
-// ReduceCtx iterates f until EOF, accumulating the results using g with initial value init.
-func ReduceCtx[T, U any](ctx context.Context, f func(context.Context) (T, error), init U, g func(context.Context, T, U) (U, error)) (U, error) {
-	y := init
-	for {
-		x, err := f(ctx)
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				return y, err
-			}
-			return y, nil
-		}
-		y, err = g(ctx, x, y)
+		y, err = f(x, y)
 		if err != nil {
 			return y, err
 		}
 	}
+	return y, nil
 }
 
 // SliceElems returns an iterator function that produces each successive element of s.
-func SliceElems[T any](s []T) func(ctx context.Context) (T, error) {
+func SliceElems[T any](s []T) func() (T, error) {
 	i := 0
-	return func(context.Context) (T, error) {
+	return func() (T, error) {
 		if i >= len(s) {
 			return *new(T), io.EOF
 		}
@@ -81,11 +74,11 @@ func SliceElems[T any](s []T) func(ctx context.Context) (T, error) {
 	}
 }
 
-// ToSlice returns a slice containing the elements produced by f.
-func ToSlice[T any](ctx context.Context, f func(ctx context.Context) (T, error)) ([]T, error) {
+// ToSlice returns a slice containing the elements produced by next.
+func ToSlice[T any](next func() (T, error)) ([]T, error) {
 	var s []T
 	for {
-		x, err := f(ctx)
+		x, err := next()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				return s, err
@@ -98,12 +91,12 @@ func ToSlice[T any](ctx context.Context, f func(ctx context.Context) (T, error))
 
 // MapKeys returns an iterator function that produces each successive element
 // of m, in arbitrary order.
-func MapKeys[K comparable, V any](m map[K]V) func(ctx context.Context) (K, error) {
+func MapKeys[K comparable, V any](m map[K]V) func() (K, error) {
 	iter := reflect.ValueOf(m).MapRange()
 	if !iter.Next() {
 		iter = nil
 	}
-	return func(ctx context.Context) (K, error) {
+	return func() (K, error) {
 		if iter == nil {
 			return *new(K), io.EOF
 		}
@@ -117,12 +110,12 @@ func MapKeys[K comparable, V any](m map[K]V) func(ctx context.Context) (K, error
 
 // MapElems returns an iterator function that produces each successive element
 // of m, in arbitrary order.
-func MapElems[K comparable, V any](m map[K]V) func(ctx context.Context) (V, error) {
+func MapElems[K comparable, V any](m map[K]V) func() (V, error) {
 	iter := reflect.ValueOf(m).MapRange()
 	if !iter.Next() {
 		iter = nil
 	}
-	return func(ctx context.Context) (V, error) {
+	return func() (V, error) {
 		if iter == nil {
 			return *new(V), io.EOF
 		}
@@ -136,12 +129,12 @@ func MapElems[K comparable, V any](m map[K]V) func(ctx context.Context) (V, erro
 
 // Map returns an iterator function that produces each successive key–value pair
 // of m, in arbitrary order.
-func Map[K comparable, V any](m map[K]V) func(ctx context.Context) (K, V, error) {
+func Map[K comparable, V any](m map[K]V) func() (K, V, error) {
 	iter := reflect.ValueOf(m).MapRange()
 	if !iter.Next() {
 		iter = nil
 	}
-	return func(ctx context.Context) (K, V, error) {
+	return func() (K, V, error) {
 		if iter == nil {
 			return *new(K), *new(V), io.EOF
 		}
@@ -154,22 +147,11 @@ func Map[K comparable, V any](m map[K]V) func(ctx context.Context) (K, V, error)
 	}
 }
 
-// Chan returns an iterator function that returns each successive element received from c.
-func Chan[T any](c <-chan T) func(ctx context.Context) (T, error) {
-	return func(ctx context.Context) (T, error) {
-		var (
-			x  T
-			ok bool
-		)
-		select {
-		case x, ok = <-c:
-		default:
-			select {
-			case <-ctx.Done():
-				return x, ctx.Err()
-			case x, ok = <-c:
-			}
-		}
+// Chan returns an iterator function that returns each successive element
+// received from c.
+func Chan[T any](c <-chan T) func() (T, error) {
+	return func() (T, error) {
+		x, ok := <- c
 		if !ok {
 			return x, io.EOF
 		}
@@ -177,21 +159,60 @@ func Chan[T any](c <-chan T) func(ctx context.Context) (T, error) {
 	}
 }
 
-// ToChan repeatedly produces a value using f and sends that value on c,
-// until either ctx is done or f returns a non-nil error.
+// Chan returns an iterator function that returns each successive element
+// received from c, or the zero T and ctx.Err() if ctx is done and no value is
+// ready to receive.
+func ChanCtx[T any](ctx context.Context, c <-chan T) func() (T, error) {
+	return func() (T, error) {
+		select {
+		case <-ctx.Done():
+			return *new(T), ctx.Err()
+		case x, ok := <-c:
+			if !ok {
+				return x, io.EOF
+			}
+			return x, nil
+		}
+	}
+}
+
+// ToChan repeatedly produces a value using next and sends that value on c,
+// until next returns a non-nil error.
 //
 // ToChan does not close the channel.
-// The caller may close it after IterateTo returns.
+// The caller may close it after ToChan returns.
 //
-// If the final error from f is io.EOF,
-// ToChan returns the final value from f and a nil error.
-// If ctx becomes done after a call to f returned a nil error,
-// ToChan returns the final (unsent) value from f and ctx.Err().
-// Otherwise, IterateTo returns the final value and error from f.
-//
-func ToChan[T any](ctx context.Context, c chan<- T, f func(ctx context.Context) (T, error)) (T, error) {
+// If the error returned by next is io.EOF, ToChan returns nil.
+// Otherwise, ToChan returns the error returned by next.
+func ToChan[T any](c chan<- T, next func() (T, error)) error {
 	for {
-		x, err := f(ctx)
+		x, err := next()
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				return err
+			}
+			return nil
+		}
+
+		c <- x
+	}
+}
+
+// ToChanCtx repeatedly produces a value using next and sends that value on c,
+// until either ctx is done or next returns a non-nil error.
+//
+// ToChanCtx does not close the channel.
+// The caller may close it after ToChanCtx returns.
+//
+// If the final error from next is io.EOF,
+// ToChanCtx returns the final value from next and a nil error.
+// If ctx becomes done after a call to next returned a nil error,
+// ToChanCtx returns the final (unsent) value from next and ctx.Err().
+// Otherwise, ToChanCtx returns the final value and error from next.
+//
+func ToChanCtx[T any](ctx context.Context, c chan<- T, next func() (T, error)) (T, error) {
+	for {
+		x, err := next()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				return x, err
@@ -200,9 +221,9 @@ func ToChan[T any](ctx context.Context, c chan<- T, f func(ctx context.Context) 
 		}
 
 		select {
-		case c <- x:
 		case <-ctx.Done():
 			return x, ctx.Err()
+		case c <- x:
 		}
 	}
 }
