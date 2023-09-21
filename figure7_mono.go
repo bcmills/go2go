@@ -4,7 +4,7 @@
 
 //go:build ignore
 
-// figure5 illustrates figure 7 of Featherweight Go,
+// figure7 illustrates figure 7 of Featherweight Go,
 // with the generic types defined in figure 7 converted to plain interfaces.
 package main
 
