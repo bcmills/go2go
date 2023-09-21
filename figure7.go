@@ -4,7 +4,7 @@
 
 //go:build ignore
 
-// figure5 illustrates figure 5 of Featherweight Go.
+// figure7 illustrates figure 7 of Featherweight Go.
 //
 // Unfortunately, it does not compile:
 //
