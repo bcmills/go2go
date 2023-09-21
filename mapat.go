@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build ignore
+
 // mapat illustrates the closest API to a conventional functional "Map"
 // that I could express under the Type Parameters draft design.
 package main
@@ -14,7 +16,7 @@ import (
 
 // MapAt copies all of the elements in src to dst, using the supplied function
 // to convert between the two.
-func MapAt(type T2, T1)(dst []T2, src []T1, convert func(T1) T2) int {
+func MapAt[T2, T1 any](dst []T2, src []T1, convert func(T1) T2) int {
 	for i, x := range src {
 		if i > len(dst) {
 			return i

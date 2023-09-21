@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build ignore
+
 // append2 illustrates the properties of a two-type-parameter "append" variant.
 // With explicit type annotations, it seems to be able to handle the same cases
 // as the existing built-in append.
@@ -15,13 +17,13 @@ import (
 	"fmt"
 )
 
-type sliceOf(type E) interface{ type []E }
+type sliceOf[E any] interface{ ~[]E }
 
-func append(type S sliceOf(T), T interface{})(s S, t ...T) S {
+func append[T any, S sliceOf[T]](s S, t ...T) S {
 	lens := len(s)
 	tot := lens + len(t)
 	if tot < 0 {
-		panic("Append: cap out of range")
+		panic("append: cap out of range")
 	}
 	if tot > cap(s) {
 		news := make([]T, tot, tot+tot/2)
@@ -59,23 +61,22 @@ func main() {
 	Ff := append(funcs, f)
 	fmt.Printf("append(%T, %T) = %T\n", funcs, f, Ff)
 
-	// []func() does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
-	fc := append([]func(), func())(funcSlice, cancel)
+	// []func() does not satisfy sliceOf[context.CancelFunc] ([]func() missing in ~[]context.CancelFunc)
+	fc := append[func()](funcSlice, cancel)
 	fmt.Printf("append(%T, %T) = %T\n", funcSlice, cancel, fc)
 
-	// []context.CancelFunc does not satisfy sliceOf(T) ([]context.CancelFunc not found in []func())
-	cf := append([]context.CancelFunc, context.CancelFunc)(cancelSlice, f)
+	cf := append(cancelSlice, f)
 	fmt.Printf("append(%T, %T) = %T\n", cancelSlice, f, cf)
 
-	// Funcs does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
-	Fc := append(Funcs, func())(funcs, cancel)
+	// Funcs does not satisfy sliceOf[context.CancelFunc] (Funcs missing in ~[]context.CancelFunc)
+	Fc := append[func()](funcs, cancel)
 	fmt.Printf("append(%T, %T) = %T\n", funcs, cancel, Fc)
 
-	// Cancels does not satisfy sliceOf(T) ([]context.CancelFunc not found in []func())
-	Cc := append(Cancels, context.CancelFunc)(cancels, f)
+	Cc := append(cancels, f)
 	fmt.Printf("append(%T, %T) = %T\n", cancels, f, Cc)
 
-	ffc := append(funcSlice, f, cancel)
+	// []func() does not satisfy sliceOf[context.CancelFunc] ([]func() missing in ~[]context.CancelFunc)
+	ffc := append[func()](funcSlice, f, cancel)
 	fmt.Printf("append(%T, %T, %T) = %T\n", funcSlice, f, cancel, ffc)
 
 	ff2 := append(funcSlice, funcSlice...)
@@ -87,27 +88,26 @@ func main() {
 	Ff2 := append(funcs, funcSlice...)
 	fmt.Printf("append(%T, %T...) = %T\n", funcs, funcSlice, Ff2)
 
-	// []func() does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
-	// fc2 := append(funcSlice, cancelSlice...)
+	// []func() does not satisfy sliceOf[context.CancelFunc] ([]func() missing in ~[]context.CancelFunc)
+	// cannot use cancelSlice (variable of type []context.CancelFunc) as []func() value in argument to append[func()]
+	// fc2 := append[func()](funcSlice, cancelSlice...)
 	// fmt.Printf("append(%T, %T...) = %T\n", funcSlice, cancelSlice, fc2)
 
-	// Funcs does not satisfy sliceOf(T) ([]func() not found in []context.CancelFunc)
-	// FC2 := append(funcs, cancels...)
+	// Funcs does not satisfy sliceOf[context.CancelFunc] (Funcs missing in ~[]context.CancelFunc)
+	// cannot use cancels (variable of type Cancels) as []func() value in argument to append[func()]
+	// FC2 := append[func()](funcs, cancels...)
 	// fmt.Printf("append(%T, %T...) = %T\n", funcs, cancels, FC2)
 
 	rr := append(recvSlice, r)
 	fmt.Printf("append(%T, %T) = %T\n", recvSlice, r, rr)
 
-	// []<-chan int does not satisfy sliceOf(T) ([]<-chan int not found in []chan int)
-	rb := append([]<-chan int, <-chan int)(recvSlice, b)
+	rb := append(recvSlice, b)
 	fmt.Printf("append(%T, %T) = %T\n", recvSlice, b, rb)
 
-	// main.Recv undefined (type func() has no field or method Recv) (http://b/159049072)
-	RR := append([]Recv, Recv)(RecvSlice, R)
+	RR := append(RecvSlice, R)
 	fmt.Printf("append(%T, %T) = %T\n", RecvSlice, R, RR)
 
-	// []Recv does not satisfy sliceOf(T) ([]Recv not found in []chan int)
-	Rb := append([]Recv, Recv)(RecvSlice, b)
+	Rb := append(RecvSlice, b)
 	fmt.Printf("append(%T, %T) = %T\n", RecvSlice, b, Rb)
 
 	rrb := append(recvSlice, r, b)
@@ -116,7 +116,7 @@ func main() {
 	rr2 := append(recvSlice, recvSlice...)
 	fmt.Printf("append(%T, %T...) = %T\n", recvSlice, recvSlice, rr2)
 
-	// []<-chan int does not satisfy sliceOf(T) ([]<-chan int not found in []chan int)
+	// cannot use bidiSlice (variable of type []chan int) as []<-chan int value in argument to append
 	// rb2 := append(recvSlice, bidiSlice...)
 	// fmt.Printf("append(%T, %T...) = %T\n", recvSlice, bidiSlice, rb2)
 }

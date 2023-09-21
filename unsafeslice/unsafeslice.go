@@ -23,18 +23,8 @@ import (
 //
 // This implements one possible API for https://golang.org/issue/19367
 // and https://golang.org/issue/13656.
-func Of[type T](p *T, n int) []T {
-	var s []T
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&s))
-
-
-	// First set the slice to point to p, then expand the cap and length,
-	// ensuring that the slice is always valid.
-	hdr.Data = uintptr(unsafe.Pointer(p))
-	hdr.Cap = n
-	hdr.Len = n
-
-	return s
+func Of[T any](p *T, n int) []T {
+	return unsafe.Slice(p, n)
 }
 
 // Convert returns a slice that refers to the same memory region as the slice src,
@@ -47,12 +37,12 @@ func Of[type T](p *T, n int) []T {
 // in the resulting slices have equivalent layouts.
 //
 // This implements one possible API for https://golang.org/issue/38203.
-func Convert[type T1, T2](src []T1) []T2 {
-	const srcElemSize = unsafe.Sizeof(*new(T1))
+func Convert[T1, T2 any](src []T1) []T2 {
+	srcElemSize := reflect.TypeOf(src).Elem().Size()
 	capBytes := uintptr(cap(src)) * srcElemSize
 	lenBytes := uintptr(len(src)) * srcElemSize
 
-	const dstElemSize = unsafe.Sizeof(*new(T2))
+	dstElemSize := reflect.TypeOf((*T2)(nil)).Elem().Size()
 
 	if capBytes%dstElemSize != 0 {
 		panic(fmt.Sprintf("Convert: src capacity (%d bytes) is not a multiple of dst element size (%T: %d bytes)", capBytes, *new(T2), dstElemSize))
@@ -70,17 +60,7 @@ func Convert[type T1, T2](src []T1) []T2 {
 		panic(fmt.Sprintf("ConvertAt: dst length (%d) overflows int", dstLen))
 	}
 
-	var dst []T2
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&dst))
-
-	// Now set the slice to point to src, then expand the cap and length,
-	// again ensuring that the slice is always valid.
-	p := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&src)).Data)
-	hdr.Data = uintptr(p)
-	hdr.Cap = int(dstCap)
-	hdr.Len = int(dstLen)
-
-	return dst
+	return unsafe.Slice((*T2)(unsafe.Pointer(unsafe.SliceData(src))), dstCap)[:dstLen]
 }
 
 // ConvertAt sets dst, which must be non-nil, to a slice that refers to the same
@@ -91,8 +71,8 @@ func Convert[type T1, T2](src []T1) []T2 {
 // in the resulting slices have equivalent layouts.
 //
 // This implements one possible API for https://golang.org/issue/38203.
-func ConvertAt[type T2, T1](dst *[]T2, src []T1) {
-	*dst = Convert(T1, T2)(src)
+func ConvertAt[T2, T1 any](dst *[]T2, src []T1) {
+	*dst = Convert[T1, T2](src)
 }
 
 // AsPointer returns a pointer to the array backing src[0:len(src)] as type *T.
@@ -103,17 +83,13 @@ func ConvertAt[type T2, T1](dst *[]T2, src []T1) {
 //
 // At some call sites, SetPointer may provide better type inference than
 // AsPointer.
-func AsPointer[type E, T](src []E) *T {
-	dst := Convert[E, T](src[:len(src):len(src)])
-	if len(dst) == 0 {
-		return nil
-	}
-	return dst[0]
+func AsPointer[E, T any](src []E) *T {
+	return unsafe.SliceData(Convert[E, T](src[:len(src):len(src)]))
 }
 
 // SetPointer sets dst, which must be non-nil, to a pointer that refers to the
 // elements of src. Typically, dst should point to a pointer to an array with
 // the same length and element type as src.
-func SetPointer[type T, E](dst **T, src []E) {
+func SetPointer[T, E any](dst **T, src []E) {
 	*dst = AsPointer[E, T](src)
 }

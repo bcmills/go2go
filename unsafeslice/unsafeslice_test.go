@@ -52,7 +52,7 @@ func ExampleConvert() {
 	// Reinterpret it as a byte slice so that we can copy in our text.
 	// The call site here is awkward because we have to specify both types,
 	// even though the source type can be inferred.
-	alias := unsafeslice.Convert(uint32, byte)(buf)
+	alias := unsafeslice.Convert[uint32, byte](buf)
 	copy(alias, input)
 
 	// Perform an endian-insensitive transformation word-by-word instead of

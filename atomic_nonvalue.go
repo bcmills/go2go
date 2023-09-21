@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build ignore
+
 // atomic_nonvalue illustrates a (less efficient) workaround for the atomic_value
 // example.
 //
@@ -16,11 +18,11 @@ import (
 	"syscall"
 )
 
-type Value(type T) struct {
-	a atomic.Value
+type Value[T any] struct {
+	a atomic.Pointer[T]
 }
 
-func (v *Value(T)) Store(x T) {
+func (v *Value[T]) Store(x T) {
 	// Store a pointer to x instead of x itself, in case T is an interface type.
 	//
 	// It would be more efficient to require the caller to instantiate Value with
@@ -29,12 +31,12 @@ func (v *Value(T)) Store(x T) {
 	v.a.Store(&x)
 }
 
-func (v *Value(T)) Load() (x T) {
-	return *v.a.Load().(*T)
+func (v *Value[T]) Load() (x T) {
+	return *v.a.Load()
 }
 
 func main() {
-	var err Value(error)
+	var err Value[error]
 	err.Store(os.ErrNotExist)
 	err.Store(syscall.ENOSYS)
 	fmt.Printf("stored error: %v\n", err.Load())

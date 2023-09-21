@@ -2,36 +2,35 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+//go:build ignore
 
-import "fmt"
+package main
 
 // Adapted from Featherweight Go, Fig. 23
 
-type Any interface{}
-type Eq(type a Any) interface {
+type Eq[a any] interface {
 	Equal(that a) Bool
 }
 type Bool interface {
 	Not() Bool
 	Equal(that Bool) Bool
-	cond(br Branches(Any)) Any
+	cond(br Branches[any]) any
 }
-type Branches(type a Any) interface {
+type Branches[a any] interface {
 	IfTT() a
 	IfFF() a
 }
-type Cond(type a Any) struct{}
-func (this Cond(a)) Eval(b Bool, br Branches(a)) a {
-	return b.cond(anyBranches(a){br}).(a)
+type Cond[a any] struct{}
+func (this Cond[a]) Eval(b Bool, br Branches[a]) a {
+	return b.cond(anyBranches[a]{br}).(a)
 }
-type anyBranches(type a Any) struct {
-	typed Branches(a)
+type anyBranches[a any] struct {
+	typed Branches[a]
 }
-func (br anyBranches(a)) IfTT() Any {
+func (br anyBranches[a]) IfTT() any {
 	return br.typed.IfTT()
 }
-func (br anyBranches(a)) IfFF() Any {
+func (br anyBranches[a]) IfFF() any {
 	return br.typed.IfFF()
 }
 
@@ -44,9 +43,7 @@ func (this FF) Not() Bool { return TT{} }
 func (this TT) Equal(that Bool) Bool { return that }
 func (this FF) Equal(that Bool) Bool { return that.Not() }
 
-func (this TT) cond(br Branches(Any)) Any { return br.IfTT() }
-func (this FF) cond(br Branches(Any)) Any { return br.IfFF() }
+func (this TT) cond(br Branches[any]) any { return br.IfTT() }
+func (this FF) cond(br Branches[any]) any { return br.IfFF() }
 
-func main() {
-	fmt.Println()
-}
+func main() {}
